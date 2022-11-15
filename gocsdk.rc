@@ -1,0 +1,5 @@
+service gocsdk_s /system/bin/gocsdk_s
+    class main
+    user root
+    group root
+    seclabel u:r:shell:s0
