@@ -1,4 +1,4 @@
-service gocsdk /system/bin/gocsdk
+service gocsdk_s /system/bin/gocsdk_s
     class main
     user root
     group root
