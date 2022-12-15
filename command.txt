@@ -2,11 +2,10 @@ Forbid404
 令牌 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
 
 command:
-
 git add gocsdk.rc
 git status 
 git commit -m "commit web file"
 git log
 git branch
 git push origin master
-
+git clone https://github.com/Forbid404/git.git
