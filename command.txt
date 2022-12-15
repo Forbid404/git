@@ -1,7 +1,9 @@
 Forbid404
 令牌 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
+     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
 
 command:
+
 git add gocsdk.rc
 git status 
 git commit -m "commit web file"
