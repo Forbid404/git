@@ -1,3 +1,569 @@
 LEARN
 
+-----------蓝牙音乐获取时间---------
+handleAvrcpCtNotiPlaybackPosInd ind 手机上报 ，handleAvrcpCtGetPlayStatusCfm cfm是函数获取的
+csr_bt_avrcp_down.c
+start_get_play_status()
 
+-----------c语言---------------------
+atoi() 函数会扫描参数str字符串，跳过前面的空白字符(例如空格，tab缩进等，可以通过isspace()函数来检测)，
+直到遇上数字或正负号才开始做转换，而再遇到非数字或字符串结束时('\0')才结束转换，并将结果返回
+例子：
+#include <stdio.h>
+#include <stdlib.h>
+int main()
+{
+    int i;
+    char buffer[256];
+    printf("请输入数字: \n");
+    fgets(buffer,256,stdin);
+    i = atoi(buffer);
+    printf("i=%d\n",i);
+    return 0;
+}
+
+-----------ubuntu-------------------
+sudo apt install vim //更新vi编译器
+sudo apt-get install net-tools //ubuntu中下载ipconfig(查看ip地址)
+sudo mount -t vboxsf ***(共享文件夹名字) /mnt/share  //挂载共享文件夹
+串口通信查看ttyUSB0
+插入串口，打开设备下的USB的USB设置
+添加USB选中插入的USB口
+回到设备下的USB，选中刚刚添加的USB设备名称，有✔就成功添加
+ls -a /dev/*USB*  //查看设备
+
+----------------x20------------------
+HCI_Link_Key_Notification //Link_key 文件查找
+sc_db.db 文件用对比文件打开
+spp  frame size 是数据大小 :RFCOMM 中Length：为数据长度
+master 为 对方发送
+slave 为 自己的发送
+
+-------abd找密匙-------------------
+win+r
+cmd
+adb devices
+adb shell
+cd /data/goc
+ls
+复制bt_snoop_20211114154926.cfa
+exit
+adb pull /data/goc/bt_snoop_20211114154926.cfa
+start .
+复制文件bt_snoop_20211114154926.cfa到没有中文路径下打开
+查找HCI_Link_Key_Notification最后一个
+确定密匙 Link_Key: 0x7a 64 1f 95 dc 6b f8 a8 86 43 0d fe 9d 11 92 f5
+
+
+-------eclipse代码编译后板子上运行-------------------
+adb connect  + ip地址 //连接板子(同一个局域网内)
+win + r
+cmd
+dir  //查看报告
+cd  Music\tcpadb\
+adb root  //给root权限
+adb remount  //重新挂载
+adb push  .\s  /system/bin  //将服务器拷贝到板子的运行路径下去
+adb push  .\c /system/bin  //将客户端拷贝到板子的运行路径下去
+adb shell  //进去板子的控制系统,linux命令可用
+cd  system/bin/  //进入运行路径
+./s 3000        //运行代码
+打开另一个命令窗口
+adb shell  //进去板子的控制系统,linux命令可用
+cd  system/bin/  //进入运行路径
+ifconfig  //查看ip地址
+./c 127.0.0.1 3000 
+可以实现功能
+
+adb pull system/bin  ./   //将板子的东西拷贝到当前文件夹
+adb pull /usr/bin/gocsdk F:\ADB //将板子的东西拷贝到文件夹下
+start .  //打开当前文件夹位置
+
+adb connect 192.168.137.145   //网络adb使用方法
+adb root
+adb connect 192.168.137.145
+adb remount
+adb shell
+
+在将代码push进去后可以直接运行
+打开另一个终端输入下面命令
+adb logcat -v time |grep goc
+adb logcat -s goc   //查看日志运行状态
+ps  -A  |grep gocsdk 查看进程是否运行
+reboot 重启
+adb logcat -s goc > F:/log/log.txt  //将日志保存在F盘中的文件中
+echo AT#AA6091F3F9EBE6>/dev/goc_serial  手动开启功能
+adb devices //查看当前设备
+ctrl + z   //杀掉 logcat -s goc
+logcat -v time   //以时间问单位打开日志
+logcat |grep -Ei "goc"  //以goc筛选日志 
+logcat |grep -Ei "adapter|blue|debug|androidruntime" //原生机器log
+logcat |grep -Ei "adapter|AEE_AED|BLUE|androidruntime"
+
+svc bluetooth disable
+svc bluetooth enable
+
+-----------设置自己的代码开机自启动将文件gocsdk.rc-------------
+代码内容为：
+service gocsdk /system/bin/gocsdk
+    class main
+    user root
+    group root
+    seclabel u:r:shell:s0
+放在 /vendor/etc/init里
+
+代码内容2：
+service gocsdk_s /system/bin/gocsdk_s
+    class main
+    user root
+    group root
+    seclabel u:r:shell:s0
+    setenv LD_LIBRARY_PATH /vendor/lib:/vendor/lib/hw
+    disabled
+on property:persist.sys.bt.goc=1
+    start gocsdk
+这个开机自启动,需要配置系统属性
+查看属性值：
+getprop  persist.sys.bt.goc
+设置属性值：
+setprop  persist.sys.bt.goc 1
+
+----------------------Android12的remount失败--------------------
+进入开发者模式，开启OEM模式
+adb reboot  bootloader  
+flashboot  flashing  unlock  //解锁操作
+机器上操作，选择YES
+flashboot  reboot
+adb root
+adb remount
+
+-------------------段错误地址打印)查询段错误位置-------------------
+logcat -v time -s DEBUG
+
+打开项目使用的ndk -e + 出问题的obj文件的具体文件，由DEBUG段错误报错决定  + 错误编号(DEBUG) 
+c:\android-ndk-r16b\toolchains\x86_64-4.9\prebuilt\windows-x86_64\bin\x86_64-linux-android-addr2line.exe
+-e  c:\eclipse_daima\zhixing\obj\local\armeabi-v7a\gocsdk   002b4bf6
+
+android-ndk-r25b\toolchains\llvm\prebuilt\windows-x86_64\bin
+
+------------------MTK debug信息打开方式---------------------------
+    setprop ro.vendor.aee.enforcing no
+    setprop persist.vendor.aeev.core.dump enable      
+    setprop persist.vendor.aeev.core.direct enable
+    setprop persist.vendor.mtk.aee.mode 3
+    setprop persist.vendor.mtk.aeev.mode 3
+    setprop persist.vendor.mtk.aee.filter 0
+
+
+logcat -s goc AEE_AED DEBUG system.err
+
+-----------------设置gocsdk.so不报错--------------------------------
+改arch/gocsdk/Android.mk
+LOCAL_MODULE := gocsdk.so
+C:\android-ndk-r25b\build\core\definitions.mk文件下的：
+
+ifneq (,$$(filter %$$(TARGET_LIB_EXTENSION) %$$(TARGET_SONAME_EXTENSION),$$(LOCAL_MODULE_FILENAME)))
+    $$(call __ndk_info,$$(LOCAL_MAKEFILE):$$(LOCAL_MODULE): LOCAL_MODULE_FILENAME must not contain a file extension)
+    $$(call __ndk_error,Aborting)
+endif
+改为：
+#ifneq (,$$(filter %$$(TARGET_LIB_EXTENSION) %$$(TARGET_SONAME_EXTENSION),$$(LOCAL_MODULE_FILENAME)))
+#    $$(call __ndk_info,$$(LOCAL_MAKEFILE):$$(LOCAL_MODULE): LOCAL_MODULE_FILENAME must not contain a file extension)
+#    $$(call __ndk_error,Aborting)
+#endif
+
+-----------------查看库文件的解析//看到安卓源文件-------------------
+android-ndk-r25b-windows.zip\android-ndk-r25b\toolchains\llvm\prebuilt\windows-x86_64\bin>llvm-readelf.exe -aC + 有外部接口的库文件 > 输出的文件
+例子：
+android-ndk-r25b-windows.zip\android-ndk-r25b\toolchains\llvm\prebuilt\windows-x86_64\bin>llvm-readelf.exe -aC E:\32\libaudioclient.so > audioclient2.txt
+
+---------------查看蓝牙声卡---------------------
+cat /proc/asound/pcm
+
+00-00: Loopback PCM : Loopback PCM : playback 8 : capture 8
+00-01: Loopback PCM : Loopback PCM : playback 8 : capture 8
+01-00: Playback_1 (*) :  : playback 1
+01-01: Playback_12 (*) :  : playback 1
+01-02: Playback_2 (*) :  : playback 1
+01-03: Playback_5 (*) :  : playback 1
+01-04: Capture_1 (*) :  : capture 1
+01-05: Capture_2 (*) :  : capture 1
+01-06: Capture_3 (*) :  : capture 1
+01-07: Capture_4 (*) :  : capture 1
+01-08: Capture_7 (*) :  : capture 1
+01-09: Capture_Mono_1 (*) :  : capture 1
+01-10: Hostless_LPBK (*) :  : playback 1 : capture 1
+01-11: Hostless_FM (*) :  : playback 1 : capture 1
+01-12: Hostless_Speech (*) :  : playback 1 : capture 1
+01-13: Hostless_Sph_Echo_Ref (*) :  : playback 1 : capture 1
+01-14: Hostless_Spk_Init (*) :  : playback 1 : capture 1
+01-15: Hostless_ADDA_DL_I2S_OUT (*) :  : playback 1
+01-30: BTCVSD snd-soc-dummy-dai-30 :  : playback 1 : capture 1
+
+30为蓝牙声卡
+--------------------编译android源码步骤---------------------------
+liugenlin@server:mt67_68xx_12.0$ cat ReadMe.txt
+//首先进入所需工程目录
+//mt67_68xx_12.0
+1.source build/envsetup.sh
+2.lunch 83
+3.make -j12 | tee build.log 2&>1&
+
+----------------关闭SElinux权限------------------------
+getenforce //查看权限
+setenforce 0
+
+
+-----------------Android系统库文件保存位置-----------------------
+/system/etc/public.libraries.txt
+非Android系统库，会出现概率链接不到。
+
+
+-------eclipse代码编译后覆盖板子上的原代码后运行-------------------
+将自己的代码替换掉 /vendor/bin 目录下的 gocsdk    (ls -l goc*)可以查找
+重启后就可以使用自己的代码
+
+
+
+-------eclipse代码编译报错总结-------------------
+1. ndk环境23不支持，后安装18可以编译不报错
+2. ndk 编译链报错
+问题是：
+Android NDK: NDK Application 'local' targets unknown ABI(s): armeabi - hf
+Android NDK: Please fix the APP_ABI definition in C:/eclipse_daima/jni/Application.mk
+C:/linux-ndk-r12b/build//../build/core/setup-app.mk:120: *** Android NDK : Aborting
+"C:/linux-ndk-r12b/ndk-build.cmd CUSTOMER=T3_Linux_BF440_HongYing_LIANXI_zj -B -j8 -B ...
+解决办法:
+是因为代码里面的cnfig.mk 编译中的APP_ABI:= armeabi-hf 没有对应ndk编译链
+去更改为 APP_ABI:= armeabi 就能成功编译
+3.gocsdk明明在路径下却报错说没有文件和目录
+可能的原因有: 没有权限，可以 chmod  777 gocsdk 
+可能有编译链有问题，比如使用软浮点的车机却使用了硬浮点的代码，这个时候就需要重新更改编译链
+
+
+------------230日志打不开-----------------------
+goc_config.c 中 is_goc_debug TRUE 打开后没有作用可检查
+
+common.mk文件中
+	DEBUG_PORT     := 1
+//             DEBUG_PORT  1 是输出跟打印同一个串口输出,
+//                                     2 是打印跟输出串口不一样
+
+//更改后可能存在问题，功能不能实现可以更改
+	Makefile 中更改为 HAS_SPLITE_UART := 0
+                 //HAS_SPLITE_UART是否将串口和打印分开 1分开,0是不分开
+
+
+-------------BLE--------------------
+0  ble做主机要求
+ 1AT#LC0,[uuid:36][role:1]   此指令为注册ble蓝牙服务
+	uuid：目前固定为00000000-0000-0000-0000-000000002002
+	role: 为ble 的角色   0：做从   1：做主
+	eg:AT#LC0,00000000-0000-0000-0000-0000000020021
+    状态回复：
+      LR0,[gattid],[status],[uuid]
+	status:注册状态    0 ：注册成功   1 注册失败
+	eg:LR0,327701,0,00000000-0000-0000-0000-000000002002
+
+2AT#LS1 此指令是扫描ble
+	eg:AT#LS1
+
+    状态回复：
+      LP,[evt_type],[addr_type],[str_addr],[primary_phy],[secondary_phy],[advertising_sid],[tx_power],[rssi],[periodic_adv_int],[data_len],[data]
+//ble4.2广播数据类型 https://blog.csdn.net/freemote/article/details/119345553
+LP70013,00,F44EFD0011CD,01,00,FF,7F,C3,0000,1F,020106050312180F180319800111094274566F696365417373697374616E74
+1F  020106050312180F180319800111094274566F696365417373697374616E74   //1F:31 62
+020106 050312180F18 03198001 11 09 42 74 56 6F 69 63 65 41 73 73 69 73 74 61 6E 74	
+					     B  t  V  o  i  c  e  A  s  s  i  s  t  a  n  t  //16+1 = 17
+
+
+primary_phy：主要的phy
+secondary_phy：次要的phy
+tx_power：发射功率
+rssi： 接收信号强度指示器
+advertising_sid：广告的sid
+ble做主只需要注册ble蓝牙服务
+
+-----------------------------------------------------------------
+
+1  新增ble 做从机需求
+相关指令：
+ 1AT#LC0,[uuid:36][role:1]   此指令为注册ble蓝牙服务
+	uuid：目前固定为00000000-0000-0000-0000-000000002002
+	role: 为ble 的角色   0：做从   1：做主
+	eg:AT#LC0,00000000-0000-0000-0000-0000000020020
+    状态回复：
+      LR0,[gattid],[status],[uuid]
+	status:注册状态    0 ：注册成功   1 注册失败
+	eg:LR0,327701,0,00000000-0000-0000-0000-000000002002
+ 
+ 2 AT#LC12,[gattid],[servicetype:1],[serveruuid] 此指令为添加ble 主服务
+	gattid:注册不了服务时，返回的id
+	servicetype:需要注册的主服务的类型，1: 16位的uuid,  2: 32位的uuid, 3: 128位uuid(2,3 协议栈暂时添加)
+	serveruuid：要使用的ble 主要服务的uuid  
+	eg:AT#LC12,327701,1,FFE0
+
+3 AT#LC13,[gattid],[servicetype:1],[properties],[valuelenth],[value],[charauuid] 此指令为添加ble 特征服务（Characteristic则是GATT profile中最基本的数据单位，由一个Properties、一个Value、一个或者多个Descriptor组成）
+	gattid:注册不了服务时，返回的id
+	servicetype:需要注册的主服务的类型，1: 16位的uuid,  2: 32位的uuid, 3: 128位uuid(2,3 协议栈暂时添加)
+	properties:特征服务的属性值，常用的有 read:0x02  write:0x08 notify:0x10
+	valuelenth：特征值长度
+	value：特征值 （可以没有特征值）
+	charauuid：特征uuid
+	eg:AT#LC13,327701,1,26,0,,0001
+
+ 4 AT#LC11,[gattid],[eventmask]  此指令为允许gatt 订阅事件
+	eventmask: 0 没有订阅事件，1 订阅物理链路状态事件， 2 订阅白名单改变事件， 3 连接参数更新等； 默认为0
+	eg：AT#LC11,327701,0
+
+ 5 AT#LC15,[gattid] 此指令为生成上面所添加的所有服务
+	eg:AT#LC15,327701  
+
+   状态回复：
+    LR3,[gattid],[connectind],[index],[attribute_type],[length],[starthandle],[endhandle]
+	eg:LR3,1048576,2,3,1018,16,E2FF,1017
+
+ 6 AT#LC10,[gattid]  此指令为注销ble
+	eg:eg:AT#LC10,327701  
+
+ 7 AT#LC16,[gattid],[[endhandle]],[write_type],[auth_req],[data_len],[data]  此指令为发送数据给ble设备
+	[endhandle]:被通知的特征值句柄，为0的情况下，协议栈会自动查找handle,当注册多个属性时，需要指定handle
+	write_type: 默认为0
+	auth_req:默认为0
+	data_len: 发送的数据长度
+	data: 发送的数据
+	eg:AT#LC16,327701,1017,0,0,3,123
+
+8 收到ble  notify 数据的状态
+	LR8,[gattid],[connect_id],[addr:12],[handle],[len],[data],[is_notify]
+	eg:LR8,327701,1048576,68BFAF520B79,1015,7,1234568,0
+
+9 LR1,[gattid],[connectid],[status],[addr:12]   //ble 连接成功状态回调
+	eg:LR1,196628,1048576,0,5C17092A5B6F
+
+10 LR9,[gattid],[connectid],[status],[addr:12]   //ble 断开状态回调
+	eg:LR9,196628,1048576,0,5C17092A5B6F
+从机ble 按上面 1 2 3 4 5 步骤操作后，手机就可以连接指定ble 服务 进行数据交互
+
+-------------烧入工具--------------------
+dld_main 账号密码为 1，1
+
+
+-------------下载apk软件命令------------
+adb  install -r   +  .apk
+
+
+-----------内置协议栈--------------------
+内置协议栈都是原生的，运行自己的代码时，需要将机器原生的蓝牙干掉，
+不然自己的代码不能运行起来
+
+-------------加密步骤--------------------
+加密需要设置3个参数
+goc_config.c里
+set_databasepath("/data/goc");  //需要客户确认
+profile_set_enc_pwdtype(0xb1);  //是需要代总提供更改的
+const char* get_customer_id()
+{
+	return "GOC-TEST";
+}  // 是需要提供给代总，调试的时候使用GOC-TEST。
+
+一般获取唯一识别码的方法
+getprop |grep serial
+
+-------------SOCKET通信----------------
+进程间通信
+#include <sys/socket.h>
+#include <sys/un.h>
+
+//PF_UNIX用来在同一机器上的提供有效的进程间通讯
+unix_socket = socket(PF_UNIX,type,0)   
+error = socketpair(PF_UNIX, type, 0, int *sv);
+
+---------------Android系统中获取设备信息------------
+getprop命令：
+
+查询Android设备的所有配置信息
+adb shell getprop
+在所列出的配置当中，以ro开头的是只读属性
+
+查看Android设备单个配置信息
+adb shell getprop  <prop-name>
+例：查看单板的信息
+adb shell getprop ro.product.board
+查看进程默认虚拟机最大堆内存
+adb shell getprop dalvik.vm.heapgrowthlimit
+
+setprop对Android系统进行配置设置(ro类型不能被设置)
+setprop <prop-name> <value>
+例：修改进程默认分配的可以使用堆内存大小:
+adb shell setprop dalvik.vm.heapgrowthlimit 128m
+
+-----------------属性设置----------------
+hci权限：
+setprop persist.bluetooth.btsnoopenable true
+
+getprop persist.bluetooth.btsnoopenable
+全log：
+setprop get_log_level true
+getprop get_log_level
+
+setprop e_log_level_info true
+getprop e_log_level_info 
+
+配置录音文件:
+setprop persist.sys.bt.audio  true
+----------------查看安卓版本-------------
+getprop | grep sdk
+
+
+-----------------后台启动软件------------
+gocskd&
+
+-----------------保存开机日志----------------
+dmesg命令默认的时间显示是从开机到log记录的时间
+adb shell dmesg > demsg.txt
+start .  ///注意这里有点
+
+----------------查看机器可执行文件----------
+which gocsdk
+
+---------------系统驱动----------------
+查看系统驱动命令：
+	lsmod
+卸载系统驱动：
+	rmmod  + 驱动名称
+
+------------md5码---------------------
+md5sum  libGbtsDriver.so
+
+----------------内核日志-------------------
+把它重定向到文件
+sh -c /mnt/nfs/gocsdk.so 2 >&1 | tee /opt/pub/bt_stack.txt&
+
+
+---------------配置环境变量---------------
+export LD_LIBRARY_PATH=/vendor/lib:/vendor/lib/hw
+export ld_library_path
+
+---------------Android音频底层调试工具(tinymix,tinypaly,tinycap)----------
+tinymix可以查看系统的音频控件
+例子:
+tinymix -D I 176 0
+tinyplay 可以直接进行播放wav格式文件
+例子:
+tinyplay  xxx.wav
+
+tinycap 可以录音
+例子:
+tinycap xxx.wav
+
+----------------多台adb设备进入方法--------------------
+adb -s + addr + shell
+
+-------------广播----------------------
+
+-------------上传代码-------------------
+桌面界面右键SVN Checkout
+选中目标文件夹，右键选中Create folder新建文件夹
+将新建文件夹下载下来，将要上传的文件复制进入下载的新建文件夹
+全选右键TortoiseSVN中的add
+add成功后，右键SVN Commit 输入更新的日志，点击ok开始上传，成功后点击ok就完成上传
+
+-------------eclipse快捷键----------
+ctrl + O (查看函数）
+ctrl + shift + f （函数对齐）
+
+------------旧协议栈的gocsdk.so无法下载--------
+将gocsdk.so改为gocsdk.exec
+
+-------------建立同步链接--------------------
+命令：Linux ln（英文全拼：link files）命令是一个非常重要命令，它的功能是为某一个文件在另外一个位置建立一个同步的链接。
+当我们需要在不同的目录，用到相同的文件时，我们不需要在每一个需要的目录下都放一个必须相同的文件，我们只要在某个固定的目录，放上该文件，然后在 其它的目录下用ln命令链接（link）它就可以，不必重复的占用磁盘空间。
+
+例子： cd /system/lib
+	ln -s /data/goc/libGbtsDriver.so  libGbtsDriver.so
+
+
+------------iinker-------------------
+linker主要作用：加载可执行程序依赖的库；查找修改被引用的符号（称为符号解析或者重定向）。
+
+-----------蓝牙启动流程----------------
+代码启动会去打印模块型号（get_module_name（））
+然后会去打开伪终端ptmx
+#include <stdlib.h>
+int grantpt(int filedes);
+int unlockpt(int filedes);
+两个函数的返回值: 若成功则返回0，若出错则返回-1
+
+grantpt函数提供的功能：在伪终端从设备可被使用之前，必须设置它的权限，使得应用程序可以访问它。它把从设备节点的用户ID设置为调用者的实际用户ID, 设置其组ID为一非指定值，通常是可以访问该终端设备的组。将权限设置为：对单个所有者是读写，对组所有者是写（0620）。
+unlockpt函数用于准予对伪终端从设备的访问，从而允许应用程序打开该设备。阻止其他进程打开从设备，使得建立该设备的应用程序有机会在使用主、从设备之前正确地初始化这些设备。
+
+ptsname()函数返回与文件描述符fd引用的主设备对应的从伪终端设备的名称。
+ptsname_r()函数是ptsname()的可重入等价函数。它返回从伪终端设备的名称，作为buf指向的缓冲区中的一个以空字符结尾的字符串。buflen参数指定了可用的字节数在缓冲区。
+
+symlink(target,link)创建一个从指定名称连接的现存目标文件开始的符号链接
+
+-----------------hid------------
+hidh = hid host  
+hidd = hid devices
+
+--------------手机取消配对继续弹框问题------
+gap_app.c
+void handleGapBondInd
+else{
+	ap_send_pair_state(&deviceAddr,cod,instData->scVar.name,0,1);
+	//修改点
+	dm_acl_disconnect_by_addr(deviceAddr);
+}
+	memset(instData->passkey_singal,0,sizeof(instData->passkey_singal));
+}
+
+-------------将16k音频文件转换为8k音频文件------------
+jni/apm/apm.cc
+extern "C" unsigned int apm_onlyAnalyzeReverse(){
+	
+	if(sample_rate != APM_SAPLE_RATE){
+		resampler_new() //
+		resampler_resample()
+	}
+}
+
+-------------小系统riscv Linux的ndk修改------------
+1.
+目录/riscv64-unknown-linux-gnu-10.2.0 是需要自己创建，从原有的基础上复制 //格式为：riscv64-unknown-linux-gnu-（+版本号）
+/android-ndk-r12b/build/core/toolchains/riscv64-unknown-linux-gnu-10.2.0/config.mk
+TOOLCHAIN_ARCH := riscv_64  //对应代码 config.mk文件，名字可自己定义
+TOOLCHAIN_ABIS := riscv_64
+2.
+将编译链Ubuntu里解压，
+/android-ndk-r12b/toolchains/riscv64-unknown-linux-gnu-10.2.0/prebuilt/linux-x86_64/里替换解压的文件
+3.
+代码编译，报什么错，看需要修改什么
+
+
+-------------查看软件需要链接的库文件----------
+arm-linux-androideabi-readelf -d gocsdk.so
+arm-linux-androideabi-readelf -d libGbtsTask.so
+
+------------Android手机连接adb不弹出允许调试窗口---------
+adb root 
+adb: unable to connect for root: device unauthorized.
+This adb server's $ADB_VENDOR_KEYS is not set
+Try 'adb kill-server' if that seems wrong.
+Otherwise check for a confirmation dialog on your device.
+解决方法：
+adb kill-server
+adb start-server
+再重新插拔usb线
+
+
+-----------Android手机获取hci日志和所有错误报告------------
+adb bugreport .
+
+小米手机  *#*#5959#*#*  路径：/sdcard/MIUI/debug_log/
+
+-------------原生蓝牙--------------------
+使用am start命令启动android apk应用程序
+ am start -n com.android.settings/.Settings
+
+=====================================================================================================================
