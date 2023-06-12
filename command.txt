@@ -11,3 +11,13 @@ git log
 git branch
 git push origin master
 git clone https://github.com/Forbid404/git.git
+
+---------------------
+git clone git@github.com:Forbid404/git.git
+git status
+git add BIJI.txt
+git status 
+git commit -m "learn note"
+git branch
+git push orgin main
+
