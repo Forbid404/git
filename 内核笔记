@@ -1,0 +1,198 @@
+账号网址
+SMS-Activate 提供世界上大多数国家的虚拟号码，以便您可以在线接收带有确认代码的短信
+https://sms-activate.org/getNumber  
+
+GPT-4 API 开发人工智能
+https://platform.openai.com/
+密匙：sk-...X9m9
+----------------------git-------------------------------
+创建git仓库
+git init
+
+git下载Linux源码到仓库里
+git status //查看哪些文件处于什么状态
+git clone git://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux-2.6.git
+
+-----------------------Linux--------------------------
+内核通过唯一的进程标识值或PID来标识每一个进程
+PID为一个数，pid_t为一个隐含类型  
+查看系统中允许存在的进程的最大数目
+/proc/sys/kernel/pid_max
+可以通过修改这个最大进程数目，对于一般的桌面系统就足够了，
+但一些大型的服务器可能需要更多的进程，这个值越小，转一圈就越快
+==================
+lseek():
+	 repositions the file offset of the open file description
+	 重新定位打开文件描述的文件偏移量
+       associated with the file descriptor fd to the argument offset
+	 与文件描述符fd关联到参数偏移量
+
+与文件描述符fd关联到参数偏移量
+头文件： #include <unistd.h>
+用 法:	  off_t lseek(int fd, off_t offset, int whence);
+
+EEK_SET 将读写位置指向文件头后再增加offset个位移量。
+SEEK_CUR 以目前的读写位置往后增加offset个位移量。
+SEEK_END 将读写位置指向文件尾后再增加offset个位移量。
+当whence值为SEEK_CUR或SEEK_END时，参数offset允许负值的出现。
+
+1) 将读写位置移到文件开头:
+lseek（int fildes,0,SEEK_SET）；
+2) 将读写位置移到文件尾:
+lseek（int fildes，0,SEEK_END）；
+3) 获取目前文件位置:
+lseek（int fildes，0,SEEK_CUR）；
+
+lseek()  
+	allows  the  file  offset to be set beyond the end of the file
+      (but this does not change the size of the  file).If  data is later
+      written at this point, subsequent reads of the data in the gap 
+	(a"hole") return null bytes ('\0') until data is actually written into
+      the gap.
+	允许将文件偏移量设置到文件末尾以外
+	(但这不会改变文件的大小)。如果数据较晚
+	此时写入，后续读取间隙中的数据
+	(一个“hole”)返回0字节('\0')，直到数据真正写入
+	的差距。
+
+SEEK_DATA 
+	将文件偏移量调整到文件中的下一个位置大于或等于包含数据的偏移量。
+	如果Offset指向数据，则文件偏移量设置为偏移量。
+
+return
+success： 返回从文件开头以字节为单位测量的结果偏移位置
+error  ：  -1 并且errno会提示错误原因
+==========================
+
+
+init 0  // 关机
+
+========================
+ldd 列出动态依赖性程序
+例子：
+ldd getpid
+	linux-vdso.so.1 (0x00007ffcc96ee000)
+	libc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x00007fb48971a000)
+	/lib64/ld-linux-x86-64.so.2 (0x00007fb489925000)
+
+===========================
+gnu_get_libc_version() 确认运行的glibc版本
+源码：
+#include <gnu/libc-version.h>
+
+const char *gnu_get_libc_version(void)l
+			Returns pointer to null-terminated,statically allocated string containing GNU C library version number //返回指向以空结束的静态分配字符串的指针，该字符串包含GNU C库版本号
+函数gnu_get_libc_version()返回一个指针，指向诸如 “2.12” 的字符串。
+
+例子：
+#include <stdio.h>
+#include <gnu/libc-version.h>
+
+const char *gnu_get_libc_version(void);
+
+char* ptr = NULL;
+
+int main()
+{
+    ptr = gnu_get_libc_version();
+    printf("ptr = %s\n",ptr);
+}
+//结果
+ptr = 2.31
+
+==========================
+perror()  会打印出其msg参数所指向的字符串，紧跟一条与当前errno值相对应的消息。
+源码：
+#include <stdio.h>
+
+void perror(const char *msg);
+
+例子：
+fd = open(pathname,flags,mode);
+if(fd == -1){
+	perror("open");
+	exit(EXIT_FAILURE);
+}
+
+由于perror()属于对语言敏感（locale-sensitive）的函数，故而错误描述中使用的都是本地语言。
+
+// exit(EXIT_FAILURE)
+EXIT_FAILURE和EXIT_SUCCESS是C语言头文件库中定义的一个符号常量，在vc++6.0下头文件stdlib.h中定义如：
+#define EXIT_FAILURE 1
+#define EXIT_SUCCESS 0
+
+EXIT_FAILURE 可以作为exit()的参数来使用，表示没有成功的执行一个程序。
+EXIT_SUCCESS作为exit()的参数来使用，表示成功地执行一个程序。
+
+================
+strerror() 会针对其errnum参数中所给定的错误号，返回相应的错误字符串。
+源码：
+#include <string.h>
+
+char *strerror(int errnum);
+			Returns pointer to error string corresponding to errnum //返回与errnum对应的错误字符串的指针
+
+	由strerror()所返回的字符串可以是静态分配的，这意味着后续对strerror()的调用可能会覆灭该字符串。
+	若无法识别errnum所含的错误编号，则strerror()会返回 “UnKnown error nnn.” 形式的字符串。在某些其他的实现中，在这种情况下，strerror()会返回NULL。
+	由于strerror()属于对语言敏感（locale-sensitive）的函数，故而错误描述中使用的都是本地语言。
+
+==============================
+stdarg.h 源码学习
+#ifdef __GNUC__
+__GNUC__为GCC中定义的宏,GCC的版本,为一个整形值,
+定义宏的方式直接实现控制
+        If all you need to know is whether or not your program is being compiled by GCC, or a non-GCC compiler that claims to accept the GNU C dialects, you can simply test __GNUC__. If you need to write code which depends on a specific version, you must be more careful. Each time the minor version is increased, the patch level is reset to zero; each time the major version is increased (which happens rarely), the minor version and patch level are reset. If you wish to use the predefined macros directly in the conditional, you will need to write it like this:
+//      如果你只需要知道你的程序是由GCC编译的，还是由一个声称接受GNUC方言的非GCC编译器编译的，你可以简单地测试__GNUC__。如果您需要编写依赖于特定版本的代码，则必须更加小心。每次小版本增加时，补丁级别重置为零;每次增加主版本时(这种情况很少发生)，都会重置次要版本和补丁级别。如果你想在条件语句中直接使用预定义的宏，你需要这样写:
+
+//注释: __GNUC_PATCHLEVEL__ 是从gcc 3.0以后才有的,在这之前的gcc是没有预定义这个宏的,
+gcc --version //查看自己系统中的gcc版本
+
+/*测试 GCC > 3.2.0 ? */
+#if __GNUC__  > 3 || \
+      (__GNUC__ == 3 && (__GNUC_MINOR__ > 2 || \
+		          (__GNUC_MINOR__ == 2 && \
+		           __GNUC_PATCHLEVEL__ > 0 ) )
+	printf("gcc > 3.2.0 \n ");
+	// ...
+#endif
+-----------------
+#include <stdio.h>
+
+int main()
+{
+#ifdef __GNUC__
+    printf("__GNUC__ = %d\n",__GNUC__); 
+#endif
+#ifdef __GNUC_MINOR__
+    printf("__GNUC_MINOR__ = %d\n",__GNUC_MINOR__); 
+#endif
+#ifdef __GNUC_PATCHLEVEL__
+    printf("__GNUC_PATCHLEVEL__ = %d\n",__GNUC_PATCHLEVEL__);
+#endif
+    
+    return 0;
+}
+-----------------
+        Another approach is to use the predefined macros to calculate a single number, then compare that against a threshold:
+//      另一种方法是使用预定义的宏来计算单个数字，然后将其与阈值进行比较:
+#define GCC_VERSION (__GNUC__ * 10000 \
+		        + __GNUC_MINOR__ * 100 \
+		        + __GNUC_PATCHLEVEL__) 
+--------------------------
+#include <stdio.h>
+#define GCC_VERSION (__GNUC__ * 10000 \
+                   + __GNUC_MINOR__ * 100 \
+                   + __GNUC_PATCHLEVEL__)
+int main()
+{
+/* Test for GCC > 3.2.0 */
+#if GCC_VERSION > 30200
+    printf("gcc > 3.2.0\n");
+    //...
+#endif
+    return 0;
+}
+--------------------------
+#define __va_rounded_size(TYPE)  \
+   (((sizeof (TYPE) + sizeof (int) - 1) / sizeof (int)) * sizeof (int))
+
