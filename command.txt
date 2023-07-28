@@ -23,3 +23,11 @@ git commit -m "learn note"
 git branch
 git push orgin main
 
+------------------
+//初始化仓库
+git init 
+git config --global user.email "1.1hello.w15@gmail.com"
+git config --global user.name "Forbid404"
+
+https : https://github.com/Forbid404/git.git
+ssh   : git@github.com:Forbid404/git.git
