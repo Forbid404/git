@@ -1167,7 +1167,61 @@ char *strerror(int errnum);
 	由于strerror()属于对语言敏感（locale-sensitive）的函数，故而错误描述中使用的都是本地语言。
 
 ==============================
+stdarg.h 源码学习
+#ifdef __GNUC__
+__GNUC__为GCC中定义的宏,GCC的版本,为一个整形值,
+定义宏的方式直接实现控制
+        If all you need to know is whether or not your program is being compiled by GCC, or a non-GCC compiler that claims to accept the GNU C dialects, you can simply test __GNUC__. If you need to write code which depends on a specific version, you must be more careful. Each time the minor version is increased, the patch level is reset to zero; each time the major version is increased (which happens rarely), the minor version and patch level are reset. If you wish to use the predefined macros directly in the conditional, you will need to write it like this:
+//      如果你只需要知道你的程序是由GCC编译的，还是由一个声称接受GNUC方言的非GCC编译器编译的，你可以简单地测试__GNUC__。如果您需要编写依赖于特定版本的代码，则必须更加小心。每次小版本增加时，补丁级别重置为零;每次增加主版本时(这种情况很少发生)，都会重置次要版本和补丁级别。如果你想在条件语句中直接使用预定义的宏，你需要这样写:
 
+//注释: __GNUC_PATCHLEVEL__ 是从gcc 3.0以后才有的,在这之前的gcc是没有预定义这个宏的,
+gcc --version //查看自己系统中的gcc版本
 
+/*测试 GCC > 3.2.0 ? */
+#if __GNUC__  > 3 || \
+      (__GNUC__ == 3 && (__GNUC_MINOR__ > 2 || \
+		          (__GNUC_MINOR__ == 2 && \
+		           __GNUC_PATCHLEVEL__ > 0 ) )
+	printf("gcc > 3.2.0 \n ");
+	// ...
+#endif
+-----------------
+#include <stdio.h>
 
-
+int main()
+{
+#ifdef __GNUC__
+    printf("__GNUC__ = %d\n",__GNUC__); 
+#endif
+#ifdef __GNUC_MINOR__
+    printf("__GNUC_MINOR__ = %d\n",__GNUC_MINOR__); 
+#endif
+#ifdef __GNUC_PATCHLEVEL__
+    printf("__GNUC_PATCHLEVEL__ = %d\n",__GNUC_PATCHLEVEL__);
+#endif
+    
+    return 0;
+}
+-----------------
+        Another approach is to use the predefined macros to calculate a single number, then compare that against a threshold:
+//      另一种方法是使用预定义的宏来计算单个数字，然后将其与阈值进行比较:
+#define GCC_VERSION (__GNUC__ * 10000 \
+		        + __GNUC_MINOR__ * 100 \
+		        + __GNUC_PATCHLEVEL__) 
+--------------------------
+#include <stdio.h>
+#define GCC_VERSION (__GNUC__ * 10000 \
+                   + __GNUC_MINOR__ * 100 \
+                   + __GNUC_PATCHLEVEL__)
+int main()
+{
+/* Test for GCC > 3.2.0 */
+#if GCC_VERSION > 30200
+    printf("gcc > 3.2.0\n");
+    //...
+#endif
+    return 0;
+}
+--------------------------
+#define __va_rounded_size(TYPE)  \
+   (((sizeof (TYPE) + sizeof (int) - 1) / sizeof (int)) * sizeof (int))
