@@ -1,5 +1,3 @@
-LEARN
-
 -----------蓝牙音乐获取时间---------
 handleAvrcpCtNotiPlaybackPosInd ind 手机上报 ，handleAvrcpCtGetPlayStatusCfm cfm是函数获取的
 csr_bt_avrcp_down.c
@@ -38,6 +36,10 @@ sc_db.db 文件用对比文件打开
 spp  frame size 是数据大小 :RFCOMM 中Length：为数据长度
 master 为 对方发送
 slave 为 自己的发送
+
+---------原生蓝牙linkey查看----------------
+cat /data/misc/bluedroid/bt_config.conf
+
 
 -------abd找密匙-------------------
 win+r
@@ -94,6 +96,7 @@ reboot 重启
 adb logcat -s goc > F:/log/log.txt  //将日志保存在F盘中的文件中
 echo AT#AA6091F3F9EBE6>/dev/goc_serial  手动开启功能
 adb devices //查看当前设备
+adb logcat -v time >log.txt //保存日志到log.txt
 ctrl + z   //杀掉 logcat -s goc
 logcat -v time   //以时间问单位打开日志
 logcat |grep -Ei "goc"  //以goc筛选日志 
@@ -518,6 +521,12 @@ else{
 	memset(instData->passkey_singal,0,sizeof(instData->passkey_singal));
 }
 
+csr_bt_gap_app_sc.c
+static void csrBtScRebondIndFunc
+//修改点
+// handleGapREbondInd(cod,deviceAddr,deviceName,addressType);
+dm_acl_disconnect_by_addr(deviceAddr);
+
 -------------将16k音频文件转换为8k音频文件------------
 jni/apm/apm.cc
 extern "C" unsigned int apm_onlyAnalyzeReverse(){
@@ -566,4 +575,599 @@ adb bugreport .
 使用am start命令启动android apk应用程序
  am start -n com.android.settings/.Settings
 
-=====================================================================================================================
+--------------Android系统设置机器内置时间-----------
+adb root
+adb remount
+adb shell
+date //查看机器时间
+date 2023-06-14 //设置机器日期
+date 06141157.00  //设置时间为 6月14日11点57分00秒 
+
+
+--------------查看Android系统分区-----------------
+mount
+
+
+--------------linux的录音播放程序代码基于alsa------------------
+#include <stdio.h>
+#include <stdlib.h>
+#include <alsa/asoundlib.h>
+
+#define BUFFER_SIZE 1024
+
+int main() {
+    int err;
+    unsigned int sample_rate = 44100;
+    unsigned int channels = 2;
+    snd_pcm_t *capture_handle, *playback_handle;
+    snd_pcm_hw_params_t *hw_params;
+
+    // 打开默认录音设备
+    err = snd_pcm_open(&capture_handle, "default", SND_PCM_STREAM_CAPTURE, 0);
+    if (err < 0) {
+        printf("无法打开录音设备: %s\n", snd_strerror(err));
+        return 1;
+    }
+
+    // 打开默认播放设备
+    err = snd_pcm_open(&playback_handle, "default", SND_PCM_STREAM_PLAYBACK, 0);
+    if (err < 0) {
+        printf("无法打开播放设备: %s\n", snd_strerror(err));
+        return 1;
+    }
+
+    // 分配硬件参数对象
+    err = snd_pcm_hw_params_malloc(&hw_params);
+    if (err < 0) {
+        printf("无法分配硬件参数对象: %s\n", snd_strerror(err));
+        return 1;
+    }
+
+    // 初始化硬件参数对象
+    err = snd_pcm_hw_params_any(capture_handle, hw_params);
+    if (err < 0) {
+        printf("无法初始化硬件参数: %s\n", snd_strerror(err));
+        return 1;
+    }
+
+    // 设置硬件参数：采样率、声道数和格式
+    err = snd_pcm_hw_params_set_rate_near(capture_handle, hw_params, &sample_rate, 0);
+    if (err < 0) {
+        printf("无法设置采样率: %s\n", snd_strerror(err));
+        return 1;
+    }
+    err = snd_pcm_hw_params_set_channels(capture_handle, hw_params, channels);
+    if (err < 0) {
+        printf("无法设置声道数: %s\n", snd_strerror(err));
+        return 1;
+    }
+
+    // 将硬件参数应用到录音设备
+    err = snd_pcm_hw_params(capture_handle, hw_params);
+    if (err < 0) {
+        printf("无法设置硬件参数到录音设备: %s\n", snd_strerror(err));
+        return 1;
+    }
+
+    // 将硬件参数应用到播放设备
+    err = snd_pcm_hw_params(playback_handle, hw_params);
+    if (err < 0) {
+        printf("无法设置硬件参数到播放设备: %s\n", snd_strerror(err));
+        return 1;
+    }
+
+    // 分配缓冲区
+    char *buffer = (char *)malloc(BUFFER_SIZE * snd_pcm_format_width(SND_PCM_FORMAT_S16_LE) / 8 * channels);
+
+    // 开始录音和播放
+    while (1) {
+        // 从录音设备读取音频数据
+        err = snd_pcm_readi(capture_handle, buffer, BUFFER_SIZE);
+        if (err < 0) {
+            printf("读取录音数据失败: %s\n", snd_strerror(err));
+            break;
+        }
+
+        // 播放音频数据
+        err = snd_pcm_writei(playback_handle, buffer, err);
+        if (err < 0) {
+            printf("播放音频数据失败: %s\n", snd_strerror(err));
+            break;
+        }
+    }
+
+    // 释放资源
+    free(buffer);
+    snd_pcm_hw_params_free(hw_params);
+    snd_pcm_close(capture_handle);
+    snd_pcm_close(playback_handle);
+
+    return 0;
+}
+
+/*这段代码首先使用snd_pcm_open函数打开默认的录音设备和播放设备，
+然后使用snd_pcm_hw_params_malloc函数分配硬件参数对象。接下来，代码使用snd_pcm_hw_params_any函数初始化硬件参数对象，
+并使用snd_pcm_hw_params_set_rate_near和snd_pcm_hw_params_set_channels函数设置采样率和声道数。
+然后，通过snd_pcm_hw_params函数将硬件参数应用到录音设备和播放设备。
+代码中的主循环使用snd_pcm_readi函数从录音设备读取音频数据，并使用snd_pcm_writei函数将音频数据写入播放设备进行播放。循环将一直运行，直到发生错误。
+最后，代码释放缓冲区和硬件参数对象，并使用snd_pcm_close函数关闭录音设备和播放设备。
+请注意，此示例代码非常简化，并且没有包含错误处理的完整逻辑。
+在实际应用中，您应该添加适当的错误处理代码以及其他功能，例如录音时间限制、静音检测等。*/
+
+
+
+------------.mk 文件中，= 、:= 、?= 、+= 的区别----------------
+= 是最基本的赋值
+:= 是覆盖之前的值
+?= 是如果没有被赋值过就赋予等号后面的值
++= 是添加等号后面的值
+
+而 = 与 := 的区别在于，= 会在makefile 展开后再决定变量的值，即最后被指定的值
+
+eg：
+
+            x = foo
+            y = $(x) bar
+            x = xyz
+
+      在上例中，y的值将会是 xyz bar ，而不是 foo bar 。
+
+而:= 表示变量的值决定于它在makefile中的位置，而不是整个makefile展开后的最终值。
+在上例中，y的值将会是 foo bar ，而不是 xyz bar 了。
+
+-----------------------lsof---------------------------------
+lsof是List open File获取被进程打开文件的信息。
+lsof命令可以查看所有已经打开了的文件，比如: 普通文件，目录，特殊的块文件，管道，socket套接字，设备，Unix域套接字等等，同时，它还可以结合 grep 以及 ps 命令进行更多的高级搜索
+
+----------------------并发程序--------------------------
+#include <sys/wait.h>
+pid_t wait(int * statloc);
+pid_t waitpid(pid_t pid,int *statloc,int options);
+
+pid_t wait(int * statloc);
+主要功能：
+阻塞当前进程
+等待其子进程退出并回收其系统资源
+解析：
+如果当前进程没有子进程，则该函数立即返回。
+如果当前进程有不止1个子进程，则该函数会回收第一个变成僵尸态的子进程的系统资源。
+子进程的退出状态（包括退出值、终止信号等）将被放入wstatus所指示的内存中，若wstatus指针为NULL，则代表当前进程放弃其子进程的退出状态。
+
+#include <stdio.h> 
+#include <stdlib.h> 
+#include <unistd.h> 
+#include <sys/wait.h> 
+
+int main()
+{
+    if(fork() == 0)
+    {
+        printf("[%d]: 我将在3秒后正常退出，退出值是88\n", getpid());
+
+        for(int i=3; i>=0; i--)
+        {
+            fprintf(stderr, " ======= %d =======%c", i, i==0?'\n':'\r');
+            sleep(1);
+        }
+
+        exit(88);
+    }
+
+    else
+    {
+        printf("[%d]: 我正在试图回收子进程的资源...\n", getpid());
+
+        int status;
+        wait(&status);
+
+        if(WIFEXITED(status))
+        {
+            printf("[%d]: 子进程正常退出了，其退出值是：%d\n", getpid(), WEXITSTATUS(status));
+        }
+    }
+}
+执行结果：
+gec@ubuntu:$ ./a.out
+[3611]: 我正在试图回收子进程的资源...
+[3612]: 我将在3秒后正常退出，退出值是88
+ ======= 0 =======
+[3611]: 子进程正常退出了，其退出值是：88
+gec@ubuntu:$ 
+
+pid_t waitpid(pid_t pid,int *statloc,int options);
+
+pid:
+	 < -1: 取该 pid 的绝对值，如果任何子进程的进程组ID等于该值，则该进程组的任一子进程中的进程状态发生变化，都会触发`waitpid`的回调;
+        == -1: 监听范围扩大到任意子进程，也就是 wait(status)；
+        ==  0: 监听进程组ID和父进程一样的子进程；
+         >  0: 监听该pid的子进程；
+
+options:
+	WNOHANG： 调用时，指定的 pid 仍未结束运行，则 wait 立即返回 0；
+        WUNTRACED： 当子进程被暂停时，则立即返回子进程的 pid;
+        WCONTINUED: 当被暂停的子进程，又被信号恢复时，则立即返回子进程的pid；
+
+------------------信号集操作函数组----------------
+// 信号集操作函数组
+#include <signal.h>
+int sigemptyset(sigset_t *set);   // 清空信号集set
+int sigfillset(sigset_t *set);    // 将所有信号加入信号集set中
+int sigaddset(sigset_t *set, int signum);         // 将信号signum添加到信号集set中
+int sigdelset(sigset_t *set, int signum);         // 将信号signum从信号集set中剔除
+int sigismember(const sigset_t *set, int signum); // 测试信号signum是否在信号集set中
+
+---------------------signal进程信号处理------------------
+//信号 man -7 signal  
+SIGINT ctrl + c
+SIGOUIT ctrl + \
+
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <signal.h>
+
+void func(int sig)
+{
+    printf("捕获到信号:%d\n", sig);
+}
+
+int main(int argc, char **argv)
+{
+    // 指定信号SIGINT关联函数
+    signal(SIGINT, func);  //SIGINT ctrl + c 
+
+    // 持续响应信号
+    while(1)
+        pause(); //等待信号
+
+    return 0;
+}
+
+pause()函数：让进程暂停直到信号出现
+头文件 #include <unistd.h>
+函数： int pause(void);
+函数说明： pause()会令目前的进程暂停(进入睡眠状态)，直到被信号(signal)所中断。
+返回值：只返回-1
+错误代码：EINTR 有信号到达中断了此函数。
+
+
+gec@ubuntu:~$ man 7 signal
+
+# 会得到类似如下的表格：
+       ...
+       Signal     Value     Action   Comment
+       ──────────────────────────────────────────────────────────────────────
+       SIGHUP        1       Term    Hangup detected on controlling terminal
+                                     or death of controlling process
+       SIGINT        2       Term    Interrupt from keyboard
+       SIGQUIT       3       Core    Quit from keyboard
+       SIGILL        4       Core    Illegal Instruction
+       SIGABRT       6       Core    Abort signal from abort(3)
+       SIGFPE        8       Core    Floating-point exception
+       SIGKILL       9       Term    Kill signal
+       SIGSEGV      11       Core    Invalid memory reference
+       SIGPIPE      13       Term    Broken pipe: write to pipe with no
+                                     readers; see pipe(7)
+       ...
+列表中的 Action 就是系统对信号的默认处理规则，默认规则如下：
+Term 中断目标进程
+Core 中断目标进程，且产生核心转储文件core。
+Stop 暂停目标进程，直到收到信号SIGCONT
+Cont 恢复目标进程运行
+lgn  忽略信号
+
+Term和Core都是中断程序，但Core处理方式还会产生转储文件core，core文件即程序在被中断的瞬间其内存映像的快照，用来给后续的调试提供追踪信息。但一般情况下系统是禁止生成所谓转储文件的，放开此项限制的命令是：
+
+Ign是默认就会被忽略的信号，典型的例子是SIGCHLD，此信号是子进程在状态转变时（比如变成僵尸时）自动发给其父进程的信号。
+
+SIGKILL和SIGSTOP这两个信号只能采取默认处理，不能阻塞、捕捉，也不能忽略。
+
+# 查看当前系统对 core 文件的限制
+gec@ubuntu:~$ ulimit -a
+core file size          (blocks, -c) 0  # core 文件大小被限制为0
+data seg size           (kbytes, -d) unlimited
+scheduling priority             (-e) 0
+file size               (blocks, -f) unlimited
+pending signals                 (-i) 7635
+max locked memory       (kbytes, -l) 16384
+max memory size         (kbytes, -m) unlimited
+open files                      (-n) 1024
+pipe size            (512 bytes, -p) 8
+POSIX message queues     (bytes, -q) 819200
+real-time priority              (-r) 0
+stack size              (kbytes, -s) 8192
+cpu time               (seconds, -t) unlimited
+max user processes              (-u) 7635
+virtual memory          (kbytes, -v) unlimited
+file locks                      (-x) unlimited
+gec@ubuntu:~$ 
+
+# 将 core 文件的大小设置为“不限制”
+gec@ubuntu:~$ ulimit -c unlimited
+
+忽略信号
+忽略信号就是直接将收到的信号丢弃：
+int main()
+{
+	//忽略信号SIGINT
+	signal(SIGINT,SIG_IGN);
+}
+
+------------扩展信号处理-------------
+#include <signal.h>
+函数：int sigaction(int signum, const struct sigaction *act,
+                     struct sigaction *oldact);
+ signum：要操作的信号。
+ act：要设置的对信号的新处理方式。
+ oldact：原来对信号的处理方式。
+ 返回值：0 表示成功，-1 表示有错误发生。
+
+struct sigaction 类型用来描述对信号的处理，定义为：
+ struct sigaction
+ {
+  void     (*sa_handler)(int);
+  void     (*sa_sigaction)(int, siginfo_t *, void *);
+  sigset_t  sa_mask;
+  int       sa_flags;
+  void     (*sa_restorer)(void);
+ };
+
+在这个结构体中，
+    sa_handler 是一个函数指针，其含义与 signal 函数中的信号处理函数类似。
+    sa_sigaction 则是另一个信号处理函数，它有三个参数，可以获得关于信号的更详细的信息。当 sa_flags 成员的值
+包含了 SA_SIGINFO 标志时，系统将使用 sa_sigaction 函数作为信号处理函数，否则使用 sa_handler 作为信号处理
+函数。在某些系统中，成员 sa_handler 与 sa_sigaction 被放在联合体中，因此使用时不要同时设置。
+    sa_mask 成员用来指定在信号处理函数执行期间需要被屏蔽的信号，特别是当某个信号被处理时，它自身会被
+自动放入进程的信号掩码，因此在信号处理函数执行期间这个信号不会再度发生。
+    sa_flags 成员用于指定信号处理的行为，它可以是一下值的“按位或”组合。
+    re_restorer 成员则是一个已经废弃的数据域，不要使用。
+sa_flags:
+ ◆ SA_RESTART：使被信号打断的系统调用自动重新发起。
+ ◆ SA_NOCLDSTOP：使父进程在它的子进程暂停或继续运行时不会收到 SIGCHLD 信号。
+ ◆ SA_NOCLDWAIT：使父进程在它的子进程退出时不会收到 SIGCHLD 信号，这时子进程如果退出也不会成为僵尸进程。
+ ◆ SA_NODEFER：使对信号的屏蔽无效，即在信号处理函数执行期间仍能发出这个信号。
+ ◆ SA_RESETHAND：信号处理之后重新设置为默认的处理方式。
+ ◆ SA_SIGINFO：使用 sa_sigaction 成员而不是 sa_handler 作为信号处理函数。
+
+例子：
+#include <stdio.h>
+#include <signal.h>
+#include <string.h>
+#include <strings.h>
+
+void func(int sig, siginfo_t *info, void *arg)
+{
+    // sig 是触发本函数的信号值
+}
+int main()
+{
+    struct sigaction act;
+    bzero(&act,sizeof(act));  //sigemptyset(&act.sa_mask)
+
+    // 指定函数响应函数
+    act.sa_sigaction = func;   //void func(int sig, siginfo_t *info, void *arg)
+    act.sa_flags |= SA_SIGINFO;  //void     (*sa_sigaction)(int, siginfo_t *, void *);
+
+    sigaction(SIGINT, &act, NULL); //SIGINT ctrl + c 
+    pause();
+}
+
+-----------编译过程中的文件-----------
+.s 汇编语言源程序;  操作: 汇编
+.S 汇编语言源程序;  操作: 预处理 + 汇编
+.o 只编译不链接形成.o文件
+
+----------------ssta()函数，获取文件状态------------
+#include <sys/stat.h>
+#include <uninstd.h>
+函数：int stat(const char *file_name,struct stat *buf);
+函数说明：stat()用来将参数file_name 所指的文件状态，复制到参数buf所指的结构中
+返回值：执行成功则返回0，失败返回-1
+
+下面是struct stat 内参数的说明：
+struct stat {
+    dev_t st_dev; //device 文件的设备编号
+    ino_t st_ino; //inode 文件的i-node
+    mode_t st_mode; //protection 文件的类型和存取的权限
+    nlink_t st_nlink; //number of hard links 连到该文件的硬连接数目, 刚建立的文件值为1.
+    uid_t st_uid; //user ID of owner 文件所有者的用户识别码
+    gid_t st_gid; //group ID of owner 文件所有者的组识别码
+    dev_t st_rdev; //device type 若此文件为装置设备文件, 则为其设备编号
+    off_t st_size; //total size, in bytes 文件大小, 以字节计算
+    unsigned long st_blksize; //blocksize for filesystem I/O 文件系统的I/O 缓冲区大小.
+    u nsigned long st_blocks; //number of blocks allocated 占用文件区块的个数, 每一区块大小为512 个字节.
+    time_t st_atime; //time of lastaccess 文件最近一次被存取或被执行的时间, 一般只有在用mknod、 utime、read、write 与tructate 时改变.
+    time_t st_mtime; //time of last modification 文件最后一次被修改的时间, 一般只有在用mknod、 utime 和write 时才会改变
+    time_t st_ctime; //time of last change i-node 最近一次被更改的时间, 此参数会在文件所有者、组、 权限被更改时更新
+};
+参数 st_mode 定义了如下树种情况：
+1、S_IFMT 0170000 文件类型的位遮罩
+2、S_IFSOCK 0140000 scoket
+3、S_IFLNK 0120000 符号连接
+4、S_IFREG 0100000 一般文件
+5、S_IFBLK 0060000 区块装置
+6、S_IFDIR 0040000 目录
+7、S_IFCHR 0020000 字符装置
+8、S_IFIFO 0010000 先进先出
+9、S_ISUID 04000 文件的 (set user-id on execution)位
+10、S_ISGID 02000 文件的 (set group-id on execution)位
+11、S_ISVTX 01000 文件的sticky 位
+12、S_IRUSR (S_IREAD) 00400 文件所有者具可读取权限
+13、S_IWUSR (S_IWRITE)00200 文件所有者具可写入权限
+14、S_IXUSR (S_IEXEC) 00100 文件所有者具可执行权限
+15、S_IRGRP 00040 用户组具可读取权限
+16、S_IWGRP 00020 用户组具可写入权限
+17、S_IXGRP 00010 用户组具可执行权限
+18、S_IROTH 00004 其他用户具可读取权限
+19、S_IWOTH 00002 其他用户具可写入权限
+20、S_IXOTH 00001 其他用户具可执行权限上述的文件类型在 POSIX 中定义了检查这些类型的宏定义
+21、S_ISLNK (st_mode) 判断是否为符号连接
+22、S_ISREG (st_mode) 是否为一般文件
+23、S_ISDIR (st_mode) 是否为目录
+24、S_ISCHR (st_mode) 是否为字符装置文件
+25、S_ISBLK (s3e) 是否为先进先出
+26、S_ISSOCK (st_mode) 是否为socket 若一目录具有sticky 位 (S_ISVTX), 则表示在此目录下的文件只能 被该文件所有者、此目录所有者或root 来删除或改名.
+
+错误代码
+、ENOENT 参数file_name 指定的文件不存在
+、ENOTDIR 路径中的目录存在但却非真正的目录
+、ELOOP 欲打开的文件有过多符号连接问题, 上限为16 符号连接
+、EFAULT 参数buf 为无效指针, 指向无法存在的内存空间
+、EACCESS 存取文件时被拒绝
+、ENOMEM 核心内存不足
+、ENAMETOOLONG 参数file_name 的路径名称太长
+
+范例：
+#include <sys/stat.h>
+#include <unistd.h>
+int main() {
+ struct stat buf;
+ stat("/etc/passwd", &buf);
+ printf("/etc/passwd file size = %d \n", buf.st_size);
+ }
+输出： /etc/passwd file size = 705
+
+内核笔记=====================================================================================================================
+账号网址
+SMS-Activate 提供世界上大多数国家的虚拟号码，以便您可以在线接收带有确认代码的短信
+https://sms-activate.org/getNumber  
+
+GPT-4 API 开发人工智能
+https://platform.openai.com/
+密匙：sk-...X9m9
+----------------------git-------------------------------
+创建git仓库
+git init
+
+git下载Linux源码到仓库里
+git status //查看哪些文件处于什么状态
+git clone git://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux-2.6.git
+
+-----------------------Linux--------------------------
+内核通过唯一的进程标识值或PID来标识每一个进程
+PID为一个数，pid_t为一个隐含类型  
+查看系统中允许存在的进程的最大数目
+/proc/sys/kernel/pid_max
+可以通过修改这个最大进程数目，对于一般的桌面系统就足够了，
+但一些大型的服务器可能需要更多的进程，这个值越小，转一圈就越快
+==================
+lseek():
+	 repositions the file offset of the open file description
+	 重新定位打开文件描述的文件偏移量
+       associated with the file descriptor fd to the argument offset
+	 与文件描述符fd关联到参数偏移量
+
+与文件描述符fd关联到参数偏移量
+头文件： #include <unistd.h>
+用 法:	  off_t lseek(int fd, off_t offset, int whence);
+
+EEK_SET 将读写位置指向文件头后再增加offset个位移量。
+SEEK_CUR 以目前的读写位置往后增加offset个位移量。
+SEEK_END 将读写位置指向文件尾后再增加offset个位移量。
+当whence值为SEEK_CUR或SEEK_END时，参数offset允许负值的出现。
+
+1) 将读写位置移到文件开头:
+lseek（int fildes,0,SEEK_SET）；
+2) 将读写位置移到文件尾:
+lseek（int fildes，0,SEEK_END）；
+3) 获取目前文件位置:
+lseek（int fildes，0,SEEK_CUR）；
+
+lseek()  
+	allows  the  file  offset to be set beyond the end of the file
+      (but this does not change the size of the  file).If  data is later
+      written at this point, subsequent reads of the data in the gap 
+	(a"hole") return null bytes ('\0') until data is actually written into
+      the gap.
+	允许将文件偏移量设置到文件末尾以外
+	(但这不会改变文件的大小)。如果数据较晚
+	此时写入，后续读取间隙中的数据
+	(一个“hole”)返回0字节('\0')，直到数据真正写入
+	的差距。
+
+SEEK_DATA 
+	将文件偏移量调整到文件中的下一个位置大于或等于包含数据的偏移量。
+	如果Offset指向数据，则文件偏移量设置为偏移量。
+
+return
+success： 返回从文件开头以字节为单位测量的结果偏移位置
+error  ：  -1 并且errno会提示错误原因
+==========================
+
+
+init 0  // 关机
+
+========================
+ldd 列出动态依赖性程序
+例子：
+ldd getpid
+	linux-vdso.so.1 (0x00007ffcc96ee000)
+	libc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x00007fb48971a000)
+	/lib64/ld-linux-x86-64.so.2 (0x00007fb489925000)
+
+===========================
+gnu_get_libc_version() 确认运行的glibc版本
+源码：
+#include <gnu/libc-version.h>
+
+const char *gnu_get_libc_version(void)l
+			Returns pointer to null-terminated,statically allocated string containing GNU C library version number //返回指向以空结束的静态分配字符串的指针，该字符串包含GNU C库版本号
+函数gnu_get_libc_version()返回一个指针，指向诸如 “2.12” 的字符串。
+
+例子：
+#include <stdio.h>
+#include <gnu/libc-version.h>
+
+const char *gnu_get_libc_version(void);
+
+char* ptr = NULL;
+
+int main()
+{
+    ptr = gnu_get_libc_version();
+    printf("ptr = %s\n",ptr);
+}
+//结果
+ptr = 2.31
+
+==========================
+perror()  会打印出其msg参数所指向的字符串，紧跟一条与当前errno值相对应的消息。
+源码：
+#include <stdio.h>
+
+void perror(const char *msg);
+
+例子：
+fd = open(pathname,flags,mode);
+if(fd == -1){
+	perror("open");
+	exit(EXIT_FAILURE);
+}
+
+由于perror()属于对语言敏感（locale-sensitive）的函数，故而错误描述中使用的都是本地语言。
+
+// exit(EXIT_FAILURE)
+EXIT_FAILURE和EXIT_SUCCESS是C语言头文件库中定义的一个符号常量，在vc++6.0下头文件stdlib.h中定义如：
+#define EXIT_FAILURE 1
+#define EXIT_SUCCESS 0
+
+EXIT_FAILURE 可以作为exit()的参数来使用，表示没有成功的执行一个程序。
+EXIT_SUCCESS作为exit()的参数来使用，表示成功地执行一个程序。
+
+================
+strerror() 会针对其errnum参数中所给定的错误号，返回相应的错误字符串。
+源码：
+#include <string.h>
+
+char *strerror(int errnum);
+			Returns pointer to error string corresponding to errnum //返回与errnum对应的错误字符串的指针
+
+	由strerror()所返回的字符串可以是静态分配的，这意味着后续对strerror()的调用可能会覆灭该字符串。
+	若无法识别errnum所含的错误编号，则strerror()会返回 “UnKnown error nnn.” 形式的字符串。在某些其他的实现中，在这种情况下，strerror()会返回NULL。
+	由于strerror()属于对语言敏感（locale-sensitive）的函数，故而错误描述中使用的都是本地语言。
+
+==============================
+
+
+
+
