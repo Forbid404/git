@@ -1027,6 +1027,112 @@ int main() {
  }
 输出： /etc/passwd file size = 705
 
+----------------------共享内存SHM实现读写-------------
+创建或打开SHM对象
+#include <sys/ipc.h>
+#include <sys/shm.h>
+函数：int shmget(key_t key,size_t size,int shmflg);
+参数：key:SHM对象键值，size：共享内存大小，
+shmflg：创建模式和权限
+    IPC_CREAT：如果key对应的共享内存不存在，则创建SHM对象
+    IPC_EXCL：如果该key对应的共享内存已存在，则报错
+        权限与文件创建open类似，用八进制表示
+函数说明：SHM对象的创建或者打开需要唯一的键值标识，并且需要指定内存的大小尺寸
+返回值：成功返回SHM对象ID，失败返回-1，错误原因存于errno中
+
+错误代码：
+EINVAL：参数size小于SHMMIN或大于SHMMAX
+EEXIST：预建立key所指的共享内存，但已经存在
+EIDRM：参数key所指的共享内存已经删除
+ENOSPC：超过了系统允许建立的共享内存的最大值(SHMALL)
+ENOENT：参数key所指的共享内存不存在，而参数shmflg未设IPC_CREAT位
+EACCES：没有权限
+ENOMEM：核心内存不足
+···································································
+映射/解除映射SHM对象
+#include <sys/types.h>
+#include <sys/shm.h>
+函数：void *shmat(int shmid,const void *shmaddr/*一般为NULL*/,int shmflg);
+函数说明：将创建好的共享内存连接到某个进程，并指定内存空间
+参数：shmid：指定的共享内存的ID，shmaddr：指定映射后的地址，因为是虚拟地址，分配的原则要兼顾诸如段对齐、权限分配等问题，因此用户进程是无法指定的，只能由系统自动分配，因此此参数一般为NULL，表示交由系统来自动分配。
+shmflg：
+    0：默认，代表共享内存可读可写。
+        SHM_RDONLY：代表共享内存只读。
+返回值：共享内存映射后的虚拟地址入口。
+正确映射之后，命令ipcs -m查看SHM对象时，可从nattch列中看到已映射进程个数
+···································································
+解除映射
+#include <sys/types.h>
+#include <sys/shm.h>
+函数：int shmdt(const void *shmaddr);
+函数说明：使用完SHM对象后，需要将其跟进程解除关联关系，即解除映射
+···································································
+删除共享内存段
+#include <sys/ipc.h>
+#include <sys/shm.h>
+函数：int shmctl(int shmid,int cmd,struct shmid_ds *buf);
+参数：shmid：指定的共享内存的ID，buf：用来存放共享内存信息的结构体
+cmd：
+    IPC_STAT：获取共享内存 的一些信息，放入shmid_ds{ }中
+    IPC_SET：将 buf 中指定的信息，设置到本共享内存中
+    IPC_RMID：删除指定的共享内存，此时第三个参数 buf 将被忽略
+···································································
+实例：
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/ipc.h>
+#include <sys/shm.h>
+#include <string.h>
+
+#define SHM_SIZE 1024  // 共享内存大小
+
+int main() {
+    int shm_id;
+    char *shared_memory;
+    key_t key = ftok("shared_memory_key", 65);  // 生成一个唯一的key值
+
+    // 创建共享内存段
+    shm_id = shmget(key, SHM_SIZE, IPC_CREAT | 0666);
+    if (shm_id < 0) {
+        perror("shmget");
+        exit(1);
+    }
+
+    // 将共享内存映射到当前进程的地址空间
+    shared_memory = (char*) shmat(shm_id, NULL, 0);
+    if (shared_memory == (char *) -1) {
+        perror("shmat");
+        exit(1);
+    }
+
+    // 写入数据到共享内存
+    strcpy(shared_memory, "Hello, shared memory!");
+
+    // 创建一个子进程
+    pid_t pid = fork();
+
+    if (pid == 0) {
+        // 子进程读取共享内存中的数据并打印
+        printf("Child Process: %s\n", shared_memory);
+    } else if (pid > 0) {
+        // 父进程等待子进程完成
+        wait(NULL);
+        printf("Parent Process: %s\n", shared_memory);
+    } else {
+        perror("fork");
+        exit(1);
+    }
+
+    // 解除共享内存的映射
+    shmdt(shared_memory);
+
+    // 删除共享内存段
+    shmctl(shm_id, IPC_RMID, NULL);
+
+    return 0;
+}
+
 内核笔记=====================================================================================================================
 账号网址
 SMS-Activate 提供世界上大多数国家的虚拟号码，以便您可以在线接收带有确认代码的短信
