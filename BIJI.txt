@@ -1133,201 +1133,211 @@ int main() {
     return 0;
 }
 
-内核笔记=====================================================================================================================
-账号网址
-SMS-Activate 提供世界上大多数国家的虚拟号码，以便您可以在线接收带有确认代码的短信
-https://sms-activate.org/getNumber  
+---------查看系统CPU处理器位数信息-------
+adb shell
+cat /proc/cpuinfo
 
-GPT-4 API 开发人工智能
-https://platform.openai.com/
-密匙：sk-...X9m9
-----------------------git-------------------------------
-创建git仓库
-git init
+-----------守护进程-----------------
+SIGHUP信号：
+忽略信号SIGHUP 挂断，在用户终端连接（正常或非正常）结束时发出，
+通常是在终端的控制进程结束时，通知同一session内的各个作业，这时它们与终端不再关联
+登录Linux时，系统会分配给登录用户一个终端(Session)。
+在这个终端运行的所有程序，包括前台进程组和 后台进程组，一般都属于这个 Session。
+当用户退出Linux登录时，前台进程组和后台有对终端输出的进程将会收到SIGHUP信号。
+这个信号的默认操作为终止进程，因此前台进 程组和后台有终端输出的进程就会中止。
+不过可以捕获这个信号，比如wget能捕获SIGHUP信号，并忽略它，这样就算退出了Linux登录，wget也 能继续下载。
+此外，对于与终端脱离关系的守护进程，这个信号用于通知它重新读取配置文件。
+······················································································
+创建会话并设置进程组ID
+#include <sys/types.h>
+#include <unistd.h>
+函数：pid_t setsid(void);
+函数说明：当进程是会话的领头进程时setsid()调用失败并返回(-1)
+setsid()调用成功后，返回新的会话的ID，调用setsid函数的进程成为新的会话的领头进程，
+并与其父进程的会话组合进程组脱离。由于会话对控制终端的独占性，进程同同时与控制终端脱离。
+······················································································
+int setpgrp(void); 将进程的PGID设置为PID相同的数值。
+······················································································
+获取系统配置信息
+#include <unistd.h>
+函数：long sysconf(int name);
+函数说明：用于获取系统配置信息，允许您查询有关运行时环境的参数，例如内存页大小、最大打开文件数、CPU核心数等。
+这些参数可以帮助您编写更具有可移植性的代码，因为它们可以根据不同的系统和硬件配置来自动适应。
+参数：name 是一个常量，用于指定要查询的系统配置参数。这些常量通常以’_SC_‘开头，定义在头文件’<unistd.h>‘中
+返回值：根据查询的配置参数，sysconf 函数返回相应的配置值。如果查询失败，返回值为 -1，同时设置 errno 以表示错误原因。
 
-git下载Linux源码到仓库里
-git status //查看哪些文件处于什么状态
-git clone git://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux-2.6.git
-
------------------------Linux--------------------------
-内核通过唯一的进程标识值或PID来标识每一个进程
-PID为一个数，pid_t为一个隐含类型  
-查看系统中允许存在的进程的最大数目
-/proc/sys/kernel/pid_max
-可以通过修改这个最大进程数目，对于一般的桌面系统就足够了，
-但一些大型的服务器可能需要更多的进程，这个值越小，转一圈就越快
-==================
-lseek():
-	 repositions the file offset of the open file description
-	 重新定位打开文件描述的文件偏移量
-       associated with the file descriptor fd to the argument offset
-	 与文件描述符fd关联到参数偏移量
-
-与文件描述符fd关联到参数偏移量
-头文件： #include <unistd.h>
-用 法:	  off_t lseek(int fd, off_t offset, int whence);
-
-EEK_SET 将读写位置指向文件头后再增加offset个位移量。
-SEEK_CUR 以目前的读写位置往后增加offset个位移量。
-SEEK_END 将读写位置指向文件尾后再增加offset个位移量。
-当whence值为SEEK_CUR或SEEK_END时，参数offset允许负值的出现。
-
-1) 将读写位置移到文件开头:
-lseek（int fildes,0,SEEK_SET）；
-2) 将读写位置移到文件尾:
-lseek（int fildes，0,SEEK_END）；
-3) 获取目前文件位置:
-lseek（int fildes，0,SEEK_CUR）；
-
-lseek()  
-	allows  the  file  offset to be set beyond the end of the file
-      (but this does not change the size of the  file).If  data is later
-      written at this point, subsequent reads of the data in the gap 
-	(a"hole") return null bytes ('\0') until data is actually written into
-      the gap.
-	允许将文件偏移量设置到文件末尾以外
-	(但这不会改变文件的大小)。如果数据较晚
-	此时写入，后续读取间隙中的数据
-	(一个“hole”)返回0字节('\0')，直到数据真正写入
-	的差距。
-
-SEEK_DATA 
-	将文件偏移量调整到文件中的下一个位置大于或等于包含数据的偏移量。
-	如果Offset指向数据，则文件偏移量设置为偏移量。
-
-return
-success： 返回从文件开头以字节为单位测量的结果偏移位置
-error  ：  -1 并且errno会提示错误原因
-==========================
-
-
-init 0  // 关机
-
-========================
-ldd 列出动态依赖性程序
-例子：
-ldd getpid
-	linux-vdso.so.1 (0x00007ffcc96ee000)
-	libc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x00007fb48971a000)
-	/lib64/ld-linux-x86-64.so.2 (0x00007fb489925000)
-
-===========================
-gnu_get_libc_version() 确认运行的glibc版本
-源码：
-#include <gnu/libc-version.h>
-
-const char *gnu_get_libc_version(void)l
-			Returns pointer to null-terminated,statically allocated string containing GNU C library version number //返回指向以空结束的静态分配字符串的指针，该字符串包含GNU C库版本号
-函数gnu_get_libc_version()返回一个指针，指向诸如 “2.12” 的字符串。
+_SC_ARG_MAX：命令行参数的最大字节数。
+_SC_CHILD_MAX：可创建的子进程数的最大值。
+_SC_CLK_TCK：每秒的时钟滴答数，用于计算时钟时间单位。
+_SC_OPEN_MAX：进程能够同时打开的最大文件数。
+_SC_PAGESIZE：内存页的大小。
+_SC_PHYS_PAGES：系统物理内存页数。
+_SC_NPROCESSORS_CONF：系统中可用的CPU核心数（配置数）。
+_SC_NPROCESSORS_ONLN：当前在线的CPU核心数。
+_SC_STREAM_MAX：同时打开的最大流（例如，文件流）数。
 
 例子：
 #include <stdio.h>
-#include <gnu/libc-version.h>
+#include <unistd.h>
 
-const char *gnu_get_libc_version(void);
+int main() {
+    long pageSize = sysconf(_SC_PAGESIZE);
+    printf("Page size: %ld bytes\n", pageSize);
 
-char* ptr = NULL;
-
-int main()
-{
-    ptr = gnu_get_libc_version();
-    printf("ptr = %s\n",ptr);
-}
-//结果
-ptr = 2.31
-
-==========================
-perror()  会打印出其msg参数所指向的字符串，紧跟一条与当前errno值相对应的消息。
-源码：
-#include <stdio.h>
-
-void perror(const char *msg);
-
-例子：
-fd = open(pathname,flags,mode);
-if(fd == -1){
-	perror("open");
-	exit(EXIT_FAILURE);
-}
-
-由于perror()属于对语言敏感（locale-sensitive）的函数，故而错误描述中使用的都是本地语言。
-
-// exit(EXIT_FAILURE)
-EXIT_FAILURE和EXIT_SUCCESS是C语言头文件库中定义的一个符号常量，在vc++6.0下头文件stdlib.h中定义如：
-#define EXIT_FAILURE 1
-#define EXIT_SUCCESS 0
-
-EXIT_FAILURE 可以作为exit()的参数来使用，表示没有成功的执行一个程序。
-EXIT_SUCCESS作为exit()的参数来使用，表示成功地执行一个程序。
-
-================
-strerror() 会针对其errnum参数中所给定的错误号，返回相应的错误字符串。
-源码：
-#include <string.h>
-
-char *strerror(int errnum);
-			Returns pointer to error string corresponding to errnum //返回与errnum对应的错误字符串的指针
-
-	由strerror()所返回的字符串可以是静态分配的，这意味着后续对strerror()的调用可能会覆灭该字符串。
-	若无法识别errnum所含的错误编号，则strerror()会返回 “UnKnown error nnn.” 形式的字符串。在某些其他的实现中，在这种情况下，strerror()会返回NULL。
-	由于strerror()属于对语言敏感（locale-sensitive）的函数，故而错误描述中使用的都是本地语言。
-
-==============================
-stdarg.h 源码学习
-#ifdef __GNUC__
-__GNUC__为GCC中定义的宏,GCC的版本,为一个整形值,
-定义宏的方式直接实现控制
-        If all you need to know is whether or not your program is being compiled by GCC, or a non-GCC compiler that claims to accept the GNU C dialects, you can simply test __GNUC__. If you need to write code which depends on a specific version, you must be more careful. Each time the minor version is increased, the patch level is reset to zero; each time the major version is increased (which happens rarely), the minor version and patch level are reset. If you wish to use the predefined macros directly in the conditional, you will need to write it like this:
-//      如果你只需要知道你的程序是由GCC编译的，还是由一个声称接受GNUC方言的非GCC编译器编译的，你可以简单地测试__GNUC__。如果您需要编写依赖于特定版本的代码，则必须更加小心。每次小版本增加时，补丁级别重置为零;每次增加主版本时(这种情况很少发生)，都会重置次要版本和补丁级别。如果你想在条件语句中直接使用预定义的宏，你需要这样写:
-
-//注释: __GNUC_PATCHLEVEL__ 是从gcc 3.0以后才有的,在这之前的gcc是没有预定义这个宏的,
-gcc --version //查看自己系统中的gcc版本
-
-/*测试 GCC > 3.2.0 ? */
-#if __GNUC__  > 3 || \
-      (__GNUC__ == 3 && (__GNUC_MINOR__ > 2 || \
-		          (__GNUC_MINOR__ == 2 && \
-		           __GNUC_PATCHLEVEL__ > 0 ) )
-	printf("gcc > 3.2.0 \n ");
-	// ...
-#endif
------------------
-#include <stdio.h>
-
-int main()
-{
-#ifdef __GNUC__
-    printf("__GNUC__ = %d\n",__GNUC__); 
-#endif
-#ifdef __GNUC_MINOR__
-    printf("__GNUC_MINOR__ = %d\n",__GNUC_MINOR__); 
-#endif
-#ifdef __GNUC_PATCHLEVEL__
-    printf("__GNUC_PATCHLEVEL__ = %d\n",__GNUC_PATCHLEVEL__);
-#endif
-    
     return 0;
 }
------------------
-        Another approach is to use the predefined macros to calculate a single number, then compare that against a threshold:
-//      另一种方法是使用预定义的宏来计算单个数字，然后将其与阈值进行比较:
-#define GCC_VERSION (__GNUC__ * 10000 \
-		        + __GNUC_MINOR__ * 100 \
-		        + __GNUC_PATCHLEVEL__) 
---------------------------
+······················································································
+设置文件创建权限掩码
+#include <sys/stat.h>
+函数：mode_t umask(mode_t mask);
+函数说明：用于设置文件创建权限掩码的函数，它在标准C库（libc）中提供。
+文件创建权限掩码决定了新创建的文件的默认权限。通过调整权限掩码，
+可以更改文件的默认权限，从而影响新创建的文件的访问权限。
+参数：mask：一个权限掩码，用于指定要设置的新的权限掩码。在新创建的文件权限中，与 mask 对应的位将会被清除，而其他位将会保留。
+返回值：返回权限掩码。
+说明：默认情况下，文件创建权限掩码为’0022‘，它表示新创建的文件将会有权限 0644（即 -rw-r--r--），其中所有者有读写权限，其他用户只有读权限。umask函数影响的是进程范围内的文件创建权限掩码，不会对其他正在运行的进程产生影响。
+也可在终端中直接使用命令临时修改一旦重启或重新登录系统就会失效
+[root@localhost ~]# umask 002
+如果想修改永久生效需要修改配置文件 /etc/profile
+例子：
+.....省略部分内容.....
+if [ $UID -gt 199]&&[ "'id -gn'" = "'id -un'" ]; then
+    umask 002
+    #如果UID大于199（普通用户），则使用此umask值
+else
+    umask 022
+    #如果UID小于199（超级用户），则使用此umask值
+fi
+.....省略部分内容.....
+上例详解:
+$UID -gt 199 :这是一个条件，用于检查当前用户的用户ID（UID）是否大于199。在Unix和Linux系统中，普通用户的UID通常从1000开始，而系统用户和服务用户的UID值较低。因此，条件检查 $UID -gt 199 实际上是在检查当前用户是否为普通用户。
+&& :这是逻辑AND操作符，它连接两个条件，只有在两个条件都为真（非零）时，整个表达式才为真。在这里，它用于将上述的UID检查与下一个条件连接起来。
+[ "'id -gn'" = "'id -un'" ] :
+    id -gn :这是一个命令替换,将返回当前用户的用户名.
+    id -un :这也是一个命令替换,将返回当前用户的用户名.
+      "'id -gn'" = "'id -un'" :这是一个字符串比较操作，它比较两个字符串是否相等。在这里，它比较用户的组名和用户名是否相同。
+
+例子:
 #include <stdio.h>
-#define GCC_VERSION (__GNUC__ * 10000 \
-                   + __GNUC_MINOR__ * 100 \
-                   + __GNUC_PATCHLEVEL__)
-int main()
-{
-/* Test for GCC > 3.2.0 */
-#if GCC_VERSION > 30200
-    printf("gcc > 3.2.0\n");
-    //...
-#endif
+#include <fcntl.h>
+#include <sys/stat.h>
+
+int main() {
+    // 设置新的文件创建权限掩码为 0077，即新创建的文件将没有任何权限
+    mode_t oldMask = umask(0077);
+
+    // 创建一个新文件
+    int fd = open("example.txt", O_CREAT | O_WRONLY, 0666);
+    if (fd == -1) {
+        perror("open");
+        return 1;
+    }
+
+    // 关闭文件
+    close(fd);
+
+    // 恢复之前的文件创建权限掩码
+    umask(oldMask);
+
     return 0;
 }
---------------------------
-#define __va_rounded_size(TYPE)  \
-   (((sizeof (TYPE) + sizeof (int) - 1) / sizeof (int)) * sizeof (int))
+··························································
+将当前的工作目录改变成以参数路径所指的目录
+#include <unistd.h>
+函数:int chdir(const char * path);
+函数说明:用于改变当前工作目录（current working directory）或进程的当前目录。当前工作目录是指在执行文件和目录操作时，相对路径将基于此目录进行解析。通过更改当前工作目录，您可以在不使用绝对路径的情况下执行文件和目录操作。
+参数:一个以 null 结尾的字符串，表示要切换到的目标目录的路径。
+返回值:如果函数调用成功，返回值为 0。如果函数调用失败，返回值为 -1，并设置 errno 来指示错误的原因。
+说明:当前工作目录的更改在整个进程中持续有效，直到进程终止或再次调用 chdir 函数。
+例子:
+#include <stdio.h>
+#include <unistd.h>
+
+int main() {
+    const char *newDir = "/path/to/new/directory";
+
+    if (chdir(newDir) == 0) {
+        printf("Changed current directory to: %s\n", newDir);
+    } else {
+        perror("chdir");
+    }
+
+    return 0;
+}
+··························································
+粤嵌例子：
+int main(void)
+{
+	pid_t a;
+	int max_fd, i;
+
+	/*********************************************
+	1. ignore the signal SIGHUP, prevent the
+	   process from being killed by the shutdown
+	   of the present controlling termination
+	忽略信号SIGHUP，防止进程被当前控制终止的关闭杀死
+	**********************************************/
+	signal(SIGHUP, SIG_IGN);
+
+	/***************************************
+	2. generate a child process, to ensure
+	   successfully calling setsid()
+	生成一个子进程，以确保成功调用setsid()
+	****************************************/
+	a = fork();
+	if(a > 0)
+		exit(0);
+
+	/******************************************************
+	3. call setsid(), let the first child process running
+	   in a new session without a controlling termination
+	调用setsid()，让第一个子进程在没有控制终止的新会话中运行
+	*******************************************************/
+	setsid();
+
+	/*************************************************
+	4. generate the second child process, to ensure
+	   that the daemon cannot open a terminal file
+	   to become its controlling termination
+	生成第二个子进程，以确保守护进程不能打开终端文件成为其控制终端
+	**************************************************/
+	a = fork();
+	if(a > 0)
+		exit(0);
+
+	/*********************************************************
+	5. detach the daemon from its original process group, to
+	   prevent any signal sent to it from being delivered
+	将守护进程从其原始进程组中分离出来，以防止发送给它的任何信号被传递
+	**********************************************************/
+	setpgrp();
+
+	/*************************************************
+	6. close any file descriptor to release resource
+	关闭任何文件描述符以释放资源
+	**************************************************/
+	max_fd = sysconf(_SC_OPEN_MAX);
+	for(i=0; i<max_fd; i++)
+		close(i);
+
+	/******************************************
+	7. clear the file permission mask to zero
+	将文件权限掩码清除为零
+	*******************************************/
+	umask(0);
+
+	/****************************************
+	8. change the process's work directory,
+	   to ensure it won't be uninstalled
+	更改进程的工作目录，以确保它不会被卸载
+	*****************************************/
+	chdir("/");
+
+	// Congratulations! Now, this process is a DAEMON!
+	// 创建守护进程成功
+	pause();
+	return 0;
+}
+
+
+=====================================================================================================================
