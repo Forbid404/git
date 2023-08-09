@@ -1338,6 +1338,75 @@ int main(void)
 	pause();
 	return 0;
 }
+-------------线程------------------------------
+创建线程
+#include <pthread.h>
+函数：int pthread_create(pthread_t *thread,
+			const pthread_attr_t *attr,
+			void *(*start_routine)(void *),
+			void *arg);
+函数说明：创建一个线程
+参数：thread：新线程的tid，attr：线程属性，若创建标准线程则该参数可设置为NULL，
+start_routine：线程函数，arg：线程函数的参数
+返回值：如果成功，pthread_create()返回0;当出现错误时，它返回一个错误编号，并且*thread的内容为未定义的。
+说明：使用-phread编译和链接
+例子：
+#include <pthread.h>
 
+void *doSomething(void *arg)
+{
+    // ...
+}
+
+int main()
+{
+    // 创建一条线程，并让其执行函数 doSomething()
+    pthread_t tid;
+    pthread_create(&tid, NULL, doSomething, NULL);
+
+    // ...
+}
+说明：上面例子，线程函数的输出和主线程的输出是并发的，可能会出现，主线程先结束，导致线程函数结束。
+不能判断线程函数和主线程执行的先后速度，是不确定的。
+····················································
+线程退出
+#include <pthread.h>
+函数：void pthread_exit(void *retval);
+函数说明：用于显式地终止当前线程的执行。调用该函数后，当前线程会立即退出，而不会等待其他线程完成。
+参数：retval：指定线程的退出状态，通常是一个指针。这个指针可以被其他线程通过 pthread_join 函数来获取。
+说明：该函数没有返回值
+
+例子：
+#include <stdio.h>
+#include <stdlib.h>
+#include <pthread.h>
+
+void *thread_function(void *arg) {
+    int *value = (int *)arg;
+    printf("Thread value: %d\n", *value);
+    *value *= 2;  // Modify the value
+    printf("*value = %d\n", *value);
+    pthread_exit(value);
+}
+
+int main() {
+    pthread_t thread;
+    int value = 5;
+
+    pthread_create(&thread, NULL, thread_function, &value);
+    void *exit_status;
+
+    pthread_join(thread, &exit_status);
+    int *result = (int *)exit_status;
+
+    printf("Main thread: Thread exited with value: %d\n", *result);
+
+    return 0;
+}
+输出：
+Thread value: 5
+*value  = 10 
+Main thread: Thread exited with value: 10
+····················································
 
 =====================================================================================================================
