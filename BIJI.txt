@@ -1408,5 +1408,107 @@ Thread value: 5
 *value  = 10 
 Main thread: Thread exited with value: 10
 ····················································
+线程的接合
+#include <pthread.h>
+函数：int pthread_join(pthread_t thread,void **retval);
+函数说明：作用是阻塞调用线程，直到指定的线程 `thread` 终止。一旦被等待的线程 `thread` 终止，`pthread_join` 函数会返回，同时将线程的退出状态（通过 `retval` 参数）传递给调用线程。
+参数：thread：是一个pthread_t类型的线程标识符，用于指定等待的线程，retval：是指向指针的指针，用于接收被等待线程的返回值，如果不关心被等待的返回值，可以将该参数设置为'NULL'
+
+例子：
+#include <stdio.h>
+#include <pthread.h>
+
+void *thread_function(void *arg) {
+    int *value = (int *)arg;
+    printf("Thread function: %d\n", *value);
+    *value = 42;
+    return NULL;
+}
+
+int main() {
+    pthread_t thread;
+    int value = 10;
+
+    // 创建线程
+    pthread_create(&thread, NULL, thread_function, &value);
+
+    // 等待线程终止并获取返回值
+    pthread_join(thread, NULL);
+
+    printf("Main thread: %d\n", value);
+
+    return 0;
+}
+输出：
+Thread function: 10
+Main thread: 42
+····················································
+获取线程ID
+#include <pthread.h>
+函数：pthread_t pthread_self(void);
+函数说明：返回调用线程的线程标识符，这个标识符可以用来在程序中唯一地标识一个线程。每个线程都有一个唯一的线程标识符。
+说明：pthread_self 函数返回的 pthread_t 标识符只在同一进程内有效。这个标识符是用于在进程内唯一标识线程的值，不适用于跨进程通信或线程标识符的全局唯一性。
+
+例子：
+#include <stdio.h>
+#include <pthread.h>
+
+void *thread_function(void *arg) {
+    pthread_t tid = pthread_self();
+    printf("Thread ID: %lu\n", tid);
+    return NULL;
+}
+
+int main() {
+    pthread_t thread1, thread2;
+
+    pthread_create(&thread1, NULL, thread_function, NULL);
+    pthread_create(&thread2, NULL, thread_function, NULL);
+
+    pthread_join(thread1, NULL);
+    pthread_join(thread2, NULL);
+
+    return 0;
+}
+····················································
+函数单例
+#include <pthread.h>
+函数：int pthread_once(pthread_once_t *once_control,void (*init_routine)(void));
+函数说明：pthread_once 函数的作用是在多线程环境下确保 init_routine 函数只被执行一次，无论有多少个线程尝试调用它。
+参数：once_control：这是一个指向pthread_once_t类型的控制变量的指针，这个控制变量用来跟踪初始化过程是否完成。通常将控制变量定义为全局变量，确保在所有线程可见，init_routine：这是一个指向函数的指针，表示要执行的初始化代码，这个函数应该没有参数和返回值，它只会被执行一次。
+返回值：如果初始化代码已经执行过，pthread_once函数将返回0，如果初始化代码尚未执行，它会执行init_routine并返回非零值
+说明：记得设置全局变量pthread_once_t：pthread_once_t once_control = PTHREAD_ONCE_INIT;
+
+例子：
+#include <stdio.h>
+#include <pthread.h>
+
+pthread_once_t once_control = PTHREAD_ONCE_INIT;
+
+void initialize_resource() {
+    printf("Initializing resource...\n");
+    // 这里可以放置需要执行的初始化代码
+}
+
+void *thread_function(void *arg) {
+    pthread_once(&once_control, initialize_resource);
+    printf("Thread is using the initialized resource.\n");
+    return NULL;
+}
+
+int main() {
+    pthread_t threads[5];
+
+    for (int i = 0; i < 5; i++) {
+        pthread_create(&threads[i], NULL, thread_function, NULL);
+    }
+
+    for (int i = 0; i < 5; i++) {
+        pthread_join(threads[i], NULL);
+    }
+
+    return 0;
+}
+····················································
 
 =====================================================================================================================
