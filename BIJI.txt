@@ -1510,5 +1510,151 @@ int main() {
     return 0;
 }
 ····················································
+线程属性
+属性归总表格：
+获取属性API与功能						设置属性API和功能
+pthread_attr_getdetachstate( )     //分离属性           pthread_attr_setdetachstate( )         
+pthread_attr_getguardsize( )       //栈警戒区大小               pthread_attr_setguardsize( ) 
+pthread_attr_getinheritsched( )    //继承策略                      pthread_attr_setinheritsched( )
+pthread_attr_getschedpolicy( )     //调度策略                      pthread_attr_setschedpolicy( )
+pthread_attr_getschedparam( )      //调度参数                      pthread_attr_setschedparam( )	
+pthread_attr_getscope( )           //竞争范围                      pthread_attr_setscope( )
+pthread_attr_getaffinity_np( )     //CPU亲和度          pthread_attr_setaffinity_np( )	
+pthread_attr_getstack( )           //栈指针和栈大小            pthread_attr_setstack( )
+pthread_attr_getstacksize( )       //栈大小                          pthread_attr_setstacksize( )
+
+#include <pthread.h>
+函数：int pthread_attr_getdetachstate(const pthread_attr_t *attr,int *detachstate);
+函数说明：函数是 POSIX 线程库（Pthreads）中用于获取线程分离状态属性的函数，
+分离状态属性决定了线程的结束时如何进行资源的清理和回收。
+参数：attr：指向要查询分离状态属性的线程属性对象的指针，detachstate：用于存储获取到的分离状态属性的变量的指针
+返回值：成功返回 0，失败返回一个非零错误码。
+
+例子：
+#include <pthread.h>
+#include <stdio.h>
+
+int main() {
+    pthread_attr_t attr;
+    pthread_attr_init(&attr);  // 初始化线程属性对象
+
+    int detachstate;
+    pthread_attr_getdetachstate(&attr, &detachstate);
+
+    if (detachstate == PTHREAD_CREATE_JOINABLE) {
+        printf("Thread is joinable.\n");
+    } else if (detachstate == PTHREAD_CREATE_DETACHED) {
+        printf("Thread is detached.\n");
+    } else {
+        printf("Unknown detach state.\n");
+    }
+
+    // 在这里执行其他操作
+
+    pthread_attr_destroy(&attr);  // 销毁线程属性对象
+
+    return 0;
+}
+输出：Thread is joinable.
+
+#include <pthread.h>
+函数：int pthread_attr_init(pthread_attr_t *attr);
+      int pthread_attr_destroy(pthread_attr_t *attr);
+函数说明：init函数是初始化线程属性的函数，
+destroy函数是用于销毁线程属性对象，当线程属性对象不再需要，应该使用这个函数来释放相关的资源，避免内存泄漏。
+他们都是POSIX线程库(Pthreads)函数
+参数：attr：指向要初始化或者要销毁的线程属性对象的指针
+
+#include <pthread.h>
+函数：int pthread_attr_setdetachstate(pthread_attr_t *attr,int detachstate);
+函数说明：函数是 POSIX 线程库（Pthreads）中用于设置线程分离状态属性的函数。
+分离状态属性决定了线程的结束时如何进行资源的清理和回收。
+参数：attr：指向要设置分离状态属性的线程属性对象的指针，
+detachstate：分离状态属性取值为以下两种：
+PTHREAD_CREATE_JOINABLE：表示线程是可连接（joinable）的，即线程结束后需要调用 pthread_join 函数来等待线程结束并回收资源。
+PTHREAD_CREATE_DETACHED：表示线程是分离（detached）的，即线程结束后会自动回收资源，无需调用 pthread_join。
+返回值：成功返回 0，失败返回一个非零错误码。
+
+例子：
+#include <stdio.h>
+#include <pthread.h>
+#include <unistd.h>
+#include <errno.h>
+#include <string.h>
+
+#include <pthread.h>
+
+void *routine(void *arg __attribute__((unused)))
+{
+    sleep(1);
+}
+
+int main()
+{
+    // 初始化属性变量，并将分离属性添加进去
+    pthread_attr_t attr;
+    pthread_attr_init(&attr);
+    pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
+
+    // 以分离属性启动线程
+    pthread_t tid;
+    pthread_create(&tid, &attr, routine, NULL);
+
+    // 分离的线程无法接合
+    if((errno=pthread_join(tid, NULL)) != 0)
+        perror("接合线程失败");
+
+    pthread_exit(NULL);
+}
+
+强制分离
+在线程启动后，使用 pthread_detach() 强制分离的做法如下：
+例子：
+#include <pthread.h>
+
+void *routine(void *arg)
+{
+    // 强制将自身设置为分离状态
+    pthread_detach(pthread_self());
+
+    // ...
+}
+
+int main()
+{
+    // 启动标准线程
+    pthread_t tid;
+    pthread_create(&tid, NULL, routine, NULL);
+
+    // ...
+}
+
+说明：由于线程是无序的，如下例子，有时会成功，有时候会失败，！！！
+#include <pthread.h>
+
+void *routine(void *arg)
+{
+    // 将自身强制分离，然后退出
+    pthread_detach(pthread_self());
+    pthread_exit("abcd");
+}
+
+int main()
+{
+    pthread_t tid;
+    pthread_create(&tid, NULL, routine, NULL);
+
+    char *s;
+    if((errno=pthread_join(tid, (void *)&s)) != 0)
+        perror("接合线程失败");
+    else
+        printf("接合线程成功:%s\n", s);
+
+    pthread_exit(NULL);
+}
+-----------------同步互斥机制-----------------------
+
+
+
 
 =====================================================================================================================
