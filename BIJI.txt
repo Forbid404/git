@@ -1653,8 +1653,32 @@ int main()
     pthread_exit(NULL);
 }
 -----------------同步互斥机制-----------------------
+互斥锁：
+头文件：#include <pthread>
+说明：互斥锁是一个特殊的变量，一般由于互斥锁需要被多条线程使用，因此一般会将互斥锁定义为全局变量
+pthread_mutex_t m;
+初始化：静态初始化，动态初始化
 
+静态初始化：pthread_mutex_t m = PTHREAD_MUTEX_INITIALIZER;
+静态初始化互斥锁不涉及动态内存，因此无需显式释放互斥锁资源，互斥锁将会伴随程序一直存在，直到程序退出。
 
+动态初始化：
+头文件：#incldue <pthread.h>
+函数：int pthread_mutex_init(pthread_mutex_t *restrict mutex.
+			   const pthread_mutexattr_t *restrict attr);
+参数：mutex:互斥锁，attr：互斥锁属性（一般设置为NULL）
+销毁互斥锁：
+函数：int pthread_mutex_destroy(pthread_mutex_t *mutex);
+
+例子：
+#include <pthread.h>
+pthread_mutex_t m = PTHREAD_MUTEX_INITIALIZER;
+
+// 加锁
+pthread_mutex_lock( &m );
+
+// 解锁
+pthread_mutex_unlock( &m );
 
 ------------------------------------------
 ARM和ROM的区别
